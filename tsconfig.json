@@ -9,14 +9,15 @@
     /* Modules */
     "module": "ESNext",
     "moduleResolution": "NodeNext",
-    "rootDir": "src",
-    "resolveJsonModule": true,
+    "rootDir": "./src",
 
-    /* JavaScript Support */
+    /* Imports */
     "allowJs": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
 
     /* Emit */
-    "outDir": "build",
+    "outDir": "dist",
     "traceResolution": true,
 
     /* Interop Constraints */
@@ -25,9 +26,14 @@
 
     /* Type Checking */
     "strict": true,
-    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitAny": false,
 
     /* Completeness */
-    "skipLibCheck": true
-  }
+    "skipLibCheck": true,
+
+    "baseUrl": "./src",
+    "paths": { "@/*": ["*"] }
+  },
+   "include": ["src/**/*"]
 }

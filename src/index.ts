@@ -20,4 +20,7 @@ client.on('messageCreate', (message) => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+// Add error handling for login
+client.login(process.env.DISCORD_TOKEN).catch((error) => {
+  console.error('Failed to log in:', error);
+});
