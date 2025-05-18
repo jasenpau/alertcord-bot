@@ -3,11 +3,10 @@ import { SlashCommandBuilder } from 'discord.js';
 
 const listAlerts: CommandDefinition = {
   data: new SlashCommandBuilder()
-    .setName('call')
-    .addStringOption((opt) => opt.setName('number').setDescription('Phone number to call').setRequired(true))
-    .setDescription('Calls specified number and joins the voice chat'),
+    .setName('alerts')
+    .setDescription('Lists active alerts'),
   execute: async (client, interaction) => {
-    await interaction.reply('OK, calling...');
+    await interaction.reply('Alerts:');
   },
 };
 

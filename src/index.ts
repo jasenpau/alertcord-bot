@@ -3,6 +3,7 @@ import loadCommands from './commands/loadCommands.js';
 import * as process from 'node:process';
 import BotClient from './extensions/botClient.js';
 import { enabledEvents } from './events/events.js';
+import 'dotenv/config'
 
 const clientIntents = new IntentsBitField([IntentsBitField.Flags.Guilds]);
 const client = new BotClient({ intents: clientIntents });
