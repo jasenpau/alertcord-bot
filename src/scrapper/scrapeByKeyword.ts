@@ -1,7 +1,5 @@
-import axios from 'axios';
-import * as cheerio from 'cheerio';
+import puppeteer from 'puppeteer';
 import * as process from 'node:process';
-import * as fs from 'fs'; // Import fs module
 import { ListingType, OrderBy, UrlBuilder } from '@/scrapper/urlBuilder.js';
 
 interface ScrapedItem {
@@ -21,27 +19,33 @@ export async function scrapeByKeyword(keyword: string): Promise<ScrapedItem[]> {
     .setOrderBy(OrderBy.UpdatedFirst)
     .setType(ListingType.ForSale);
 
-  try {
-    const response = await axios.get(urlBuilder.build(), {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0',
-      },
-    });
-    const html = response.data;
-    console.log(html);
-    const $ = cheerio.load(html);
-    const items: ScrapedItem[] = [];
+  const browser = await puppeteer.launch({
+    headless: false
+  });
+  const page = await browser.newPage();
 
-    $('.standard-list-item').each((_, element) => {
-      const item: ScrapedItem = {
-        externalId: $(element).attr('data-item-id') || '',
-        title: $(element).find('.title').text().trim(),
-        description: $(element).find('.first-dataline').text().trim(),
-        locationField: $(element).find('.second-dataline').text().trim(),
-        link: $(element).attr('href') || '',
-        price: $(element).find('.price').text().trim(),
-      };
-      items.push(item);
+  try {
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0');
+    await page.goto(urlBuilder.build(), { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#searchForm', {timeout: 5_000});
+
+    const items: ScrapedItem[] = await page.evaluate(() => {
+      // @ts-ignore
+      const elements = document.querySelectorAll('.standard-list-item');
+      const scrapedItems: ScrapedItem[] = [];
+
+      elements.forEach((element) => {
+        const externalId = element.getAttribute('data-item-id') || '';
+        const title = (element.querySelector('.title')?.textContent || '').trim();
+        const description = (element.querySelector('.first-dataline')?.textContent || '').trim();
+        const locationField = (element.querySelector('.second-dataline')?.textContent || '').trim();
+        const link = element.getAttribute('href') || '';
+        const price = (element.querySelector('.price')?.textContent || '').trim();
+
+        scrapedItems.push({ externalId, title, description, locationField, link, price });
+      });
+
+      return scrapedItems;
     });
 
     return items;
@@ -49,11 +53,11 @@ export async function scrapeByKeyword(keyword: string): Promise<ScrapedItem[]> {
     console.error('Error scraping data:', error);
 
     // Write error response HTML to a file if available
-    if (error.response && error.response.data) {
-      fs.writeFileSync('error_response.html', error.response.data, 'utf-8');
-    }
+    // const errorHtml = await page.content();
+    // fs.writeFileSync('error_response.html', errorHtml, 'utf-8');
 
     return [];
+  } finally {
+    await browser.close();
   }
 }
-
