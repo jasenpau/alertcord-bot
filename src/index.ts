@@ -1,26 +1,13 @@
-import { Client, IntentsBitField } from 'discord.js';
+import { IntentsBitField } from 'discord.js';
+import loadCommands from './commands/loadCommands.js';
 import * as process from 'node:process';
-import 'dotenv/config';
+import BotClient from './extensions/botClient.js';
+import { enabledEvents } from './events/events.js';
 
-const clientIntents = new IntentsBitField();
-clientIntents.add(
-  IntentsBitField.Flags.Guilds,
-  IntentsBitField.Flags.GuildMessages,
-  IntentsBitField.Flags.MessageContent,
-);
-const client = new Client({ intents: clientIntents });
-
-client.once('ready', () => {
-  console.log(`Logged in as ${client.user?.tag}!`);
-});
-
-client.on('messageCreate', (message) => {
-  if (message.content === '!ping') {
-    message.reply('Pong!');
-  }
-});
-
-// Add error handling for login
+const clientIntents = new IntentsBitField([IntentsBitField.Flags.Guilds]);
+const client = new BotClient({ intents: clientIntents });
+client.commands = loadCommands();
+client.loadEvents(enabledEvents);
 client.login(process.env.DISCORD_TOKEN).catch((error) => {
   console.error('Failed to log in:', error);
 });
