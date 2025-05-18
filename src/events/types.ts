@@ -1,4 +1,3 @@
-import { Client } from 'discord.js';
 import BotClient from '../extensions/botClient.js';
 
 export interface EventHandler {
