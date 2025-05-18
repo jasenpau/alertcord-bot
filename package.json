@@ -11,11 +11,14 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc && tsc-alias",
     "deploy-commands": "tsx src/deploy-commands.ts",
-    "lint": "prettier ./src --check && eslint ./src"
+    "lint": "prettier ./src --check && eslint ./src",
+    "scrape": "tsx src/scrape.ts"
   },
   "dependencies": {
     "@discordjs/rest": "^2.5.0",
+    "axios": "^1.6.7",
     "better-sqlite3": "^11.10.0",
+    "cheerio": "^1.0.0-rc.12",
     "discord-api-types": "^0.38.8",
     "discord.js": "^14.19.3",
     "dotenv": "^16.5.0"
