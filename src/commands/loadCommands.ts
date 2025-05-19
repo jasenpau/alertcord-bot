@@ -4,12 +4,18 @@ import listAlerts from './listAlerts.mjs';
 import createAlert from './createAlert.mjs';
 import deleteAlert from './deleteAlert.mjs';
 import updateAlert from './updateAlert.mjs';
+import listFilteredKeywords from './listFilteredKeywords.mjs';
+import addFilteredKeyword from './addFilteredKeyword.mjs';
+import deleteFilteredKeyword from './deleteFilteredKeyword.mjs';
 
 const commandDefinitions: CommandDefinition[] = [
   listAlerts,
   createAlert,
   deleteAlert,
   updateAlert,
+  listFilteredKeywords,
+  addFilteredKeyword,
+  deleteFilteredKeyword,
 ];
 
 const loadCommands = () => {

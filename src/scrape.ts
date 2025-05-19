@@ -3,6 +3,7 @@ import { scrapeByKeyword } from '@/scrapper/scrapeByKeyword.js';
 import { processListing } from '@/scrapper/processListing.js';
 import { initializeDatabase, addListings } from '@/data/database.js';
 import { filterExistingListings } from '@/scrapper/filterExistingListings.js';
+import { filterByKeywords } from '@/scrapper/filterByKeywords.js';
 
 // Initialize database before starting
 initializeDatabase();
@@ -17,11 +18,14 @@ const processedResults = await Promise.all(
 // Filter out items that already exist in the database
 const newListings = filterExistingListings(processedResults);
 
+// Filter out items that contain filtered keywords
+const filteredListings = filterByKeywords(newListings);
+
 // Save only new listings to the database
-if (newListings.length > 0) {
-  addListings(newListings);
+if (filteredListings.length > 0) {
+  addListings(filteredListings);
   console.log(
-    `Saved ${newListings.length} new listings to the database (${processedResults.length - newListings.length} skipped as duplicates)`,
+    `Saved ${filteredListings.length} new listings to the database (${processedResults.length - filteredListings.length} skipped)`,
   );
 } else {
   console.log(

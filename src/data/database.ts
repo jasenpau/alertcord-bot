@@ -31,6 +31,15 @@ export function initializeDatabase() {
     )
   `,
   ).run();
+
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS filtered_keywords (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      keyword TEXT UNIQUE NOT NULL
+    )
+  `,
+  ).run();
 }
 
 export function getAlerts(): Alert[] {
@@ -220,4 +229,55 @@ export function getListingByExternalId(
     ...result,
     processedOn: new Date(result.processedOn),
   };
+}
+
+export function getFilteredKeywords(): { id: number; keyword: string }[] {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const query = db.prepare('SELECT * FROM filtered_keywords ORDER BY keyword');
+  // @ts-ignore
+  return query.all();
+}
+
+export function addFilteredKeyword(keyword: string): void {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const query = db.prepare(
+    'INSERT OR IGNORE INTO filtered_keywords (keyword) VALUES (?)',
+  );
+  query.run(keyword.trim());
+}
+
+export function addFilteredKeywords(keywords: string[]): { added: number } {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const insert = db.prepare(
+    'INSERT OR IGNORE INTO filtered_keywords (keyword) VALUES (?)',
+  );
+  let added = 0;
+
+  const transaction = db.transaction((keywords) => {
+    for (const keyword of keywords) {
+      const result = insert.run(keyword.trim());
+      if (result.changes > 0) added++;
+    }
+  });
+
+  transaction(keywords);
+  return { added };
+}
+
+export function deleteFilteredKeywordByName(keyword: string): boolean {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const query = db.prepare('DELETE FROM filtered_keywords WHERE keyword = ?');
+  return query.run(keyword.trim()).changes > 0;
 }
