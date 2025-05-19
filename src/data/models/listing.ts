@@ -5,5 +5,6 @@ export interface Listing {
   price?: number;
   link: string;
   location?: string;
-  processedOn: Date;
+  description?: string;
+  processedOn?: Date;
 }

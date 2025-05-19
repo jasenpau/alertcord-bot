@@ -1,10 +1,12 @@
 import Database from 'better-sqlite3';
-import {Alert} from "@/data/models/alert.js";
+import { Alert } from '@/data/models/alert.js';
+import { Listing } from '@/data/models/listing.js';
 
 const db = new Database('alertcord-db.sqlite');
 
 export function initializeDatabase() {
-  db.prepare(`
+  db.prepare(
+    `
     CREATE TABLE IF NOT EXISTS alerts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -12,7 +14,23 @@ export function initializeDatabase() {
       notify_price REAL,
       urgent_notify_price REAL
     )
-  `).run();
+  `,
+  ).run();
+
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS listings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      externalId TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      price REAL,
+      link TEXT NOT NULL,
+      location TEXT,
+      description TEXT,
+      processedOn TEXT
+    )
+  `,
+  ).run();
 }
 
 export function getAlerts(): Alert[] {
@@ -29,7 +47,9 @@ export function getAlertByName(name: string): Alert | undefined {
     throw new Error('Database not initialized');
   }
 
-  const query = db.prepare<[string], Alert>('SELECT * FROM alerts WHERE name = ?');
+  const query = db.prepare<[string], Alert>(
+    'SELECT * FROM alerts WHERE name = ?',
+  );
   return query.get(name);
 }
 
@@ -51,11 +71,14 @@ export function addAlert(alert: Omit<Alert, 'id'>): void {
     alert.name,
     alert.keywords,
     alert.notify_price === undefined ? null : alert.notify_price,
-    alert.urgent_notify_price === undefined ? null : alert.urgent_notify_price
+    alert.urgent_notify_price === undefined ? null : alert.urgent_notify_price,
   );
 }
 
-export function deleteAlertByIdOrName(id: number | null, name: string | null): boolean {
+export function deleteAlertByIdOrName(
+  id: number | null,
+  name: string | null,
+): boolean {
   if (!db) {
     throw new Error('Database not initialized');
   }
@@ -72,7 +95,10 @@ export function deleteAlertByIdOrName(id: number | null, name: string | null): b
   return false;
 }
 
-export function updateAlert(id: number, updates: Partial<Omit<Alert, 'id'>>): boolean {
+export function updateAlert(
+  id: number,
+  updates: Partial<Omit<Alert, 'id'>>,
+): boolean {
   if (!db) {
     throw new Error('Database not initialized');
   }
@@ -114,4 +140,84 @@ export function updateAlert(id: number, updates: Partial<Omit<Alert, 'id'>>): bo
   `);
 
   return query.run(...values).changes > 0;
+}
+
+export function addListing(listing: Omit<Listing, 'id'>): void {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const query = db.prepare(`
+    INSERT OR IGNORE INTO listings (externalId, title, price, link, location, description, processedOn)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  query.run(
+    listing.externalId,
+    listing.title,
+    listing.price === undefined ? null : listing.price,
+    listing.link,
+    listing.location || null,
+    listing.description || null,
+    listing.processedOn?.toISOString() || null,
+  );
+}
+
+export function addListings(listings: Omit<Listing, 'id'>[]): void {
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO listings (externalId, title, price, link, location, description, processedOn)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const insertMany = db.transaction((listings) => {
+    for (const listing of listings) {
+      insert.run(
+        listing.externalId,
+        listing.title,
+        listing.price === undefined ? null : listing.price,
+        listing.link,
+        listing.location || null,
+        listing.description || null,
+        listing.processedOn?.toISOString() || null,
+      );
+    }
+  });
+
+  insertMany(listings);
+}
+
+export function getListings(): Listing[] {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const query = db.prepare(`SELECT * FROM listings`);
+  const results = query.all();
+
+  return results.map((row) => ({
+    // @ts-ignore
+    ...row,
+    // @ts-ignore
+    processedOn: row.processedOn ? new Date(row.processedOn) : null,
+  }));
+}
+
+export function getListingByExternalId(
+  externalId: string,
+): Listing | undefined {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const query = db.prepare<[string], any>(
+    'SELECT * FROM listings WHERE externalId = ?',
+  );
+  const result = query.get(externalId);
+
+  if (!result) return undefined;
+
+  return {
+    ...result,
+    processedOn: new Date(result.processedOn),
+  };
 }
