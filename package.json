@@ -12,7 +12,8 @@
     "build": "tsc && tsc-alias",
     "deploy-commands": "tsx src/deploy-commands.ts",
     "lint": "prettier ./src --check && eslint ./src",
-    "scrape": "tsx src/scrape.ts"
+    "scrape": "tsx src/scrape.ts",
+    "scrape-process": "tsx src/scrapeProcessing.ts"
   },
   "dependencies": {
     "@discordjs/rest": "^2.5.0",
@@ -22,6 +23,7 @@
     "discord-api-types": "^0.38.8",
     "discord.js": "^14.19.3",
     "dotenv": "^16.5.0",
+    "openai": "^4.100.0",
     "puppeteer": "^24.8.2"
   },
   "devDependencies": {

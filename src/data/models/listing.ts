@@ -1,3 +1,9 @@
+export enum ProcessingResult {
+  Success = 1,
+  Error = 2,
+  NoData = 3,
+}
+
 export interface Listing {
   id: number;
   externalId: string;
@@ -6,5 +12,7 @@ export interface Listing {
   link: string;
   location?: string;
   description?: string;
+  fullDescription?: string;
   processedOn?: Date;
+  processingResult?: ProcessingResult;
 }
