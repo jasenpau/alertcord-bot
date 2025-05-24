@@ -13,29 +13,33 @@ const listAlerts: CommandDefinition = {
       return;
     }
 
-    const embeds = alerts.map(alert => 
+    const embeds = alerts.map((alert) =>
       new EmbedBuilder()
         .setTitle(`Alert #${alert.id}: ${alert.name}`)
-        .setColor(0x0099FF)
+        .setColor(0x0099ff)
         .addFields(
-          { name: '🔍 Keywords', value: `\`${alert.keywords}\``, inline: false },
-          { 
-            name: '💰 Notify Price', 
-            value: `\`${alert.notify_price ?? 'Not set'}\``, 
-            inline: true 
+          {
+            name: '🔍 Keywords',
+            value: `\`${alert.keywords}\``,
+            inline: false,
           },
-          { 
-            name: '⚡ Urgent Price', 
-            value: `\`${alert.urgent_notify_price ?? 'Not set'}\``, 
-            inline: true 
-          }
+          {
+            name: '💰 Notify Price',
+            value: `\`${alert.notifyPrice ?? 'Not set'}\``,
+            inline: true,
+          },
+          {
+            name: '⚡ Urgent Price',
+            value: `\`${alert.urgentNotifyPrice ?? 'Not set'}\``,
+            inline: true,
+          },
         )
-        .setTimestamp()
+        .setTimestamp(),
     );
 
-    await interaction.reply({ 
+    await interaction.reply({
       content: `📢 Found ${alerts.length} active alert${alerts.length === 1 ? '' : 's'}:`,
-      embeds: embeds 
+      embeds: embeds,
     });
   },
 };

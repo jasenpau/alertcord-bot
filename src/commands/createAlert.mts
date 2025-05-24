@@ -1,7 +1,7 @@
 import { CommandDefinition } from './types.js';
 import { SlashCommandBuilder } from 'discord.js';
 import { addAlert } from '@/data/database.js';
-import console from "node:console";
+import console from 'node:console';
 
 const createAlert: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -35,14 +35,16 @@ const createAlert: CommandDefinition = {
     const name = interaction.options.getString('name', true);
     const keywords = interaction.options.getString('keywords', true);
     const notifyPrice = interaction.options.getNumber('notify_price');
-    const urgentNotifyPrice = interaction.options.getNumber('urgent_notify_price');
+    const urgentNotifyPrice = interaction.options.getNumber(
+      'urgent_notify_price',
+    );
 
     try {
       addAlert({
         name,
-        keywords,
-        notify_price: notifyPrice,
-        urgent_notify_price: urgentNotifyPrice,
+        keywords: keywords.toLowerCase(),
+        notifyPrice: notifyPrice,
+        urgentNotifyPrice: urgentNotifyPrice,
       });
       await interaction.reply(`Alert **${name}** created successfully.`);
     } catch (error) {
@@ -58,4 +60,3 @@ const createAlert: CommandDefinition = {
 };
 
 export default createAlert;
-

@@ -7,6 +7,9 @@ import updateAlert from './updateAlert.mjs';
 import listFilteredKeywords from './listFilteredKeywords.mjs';
 import addFilteredKeyword from './addFilteredKeyword.mjs';
 import deleteFilteredKeyword from './deleteFilteredKeyword.mjs';
+import addNotificationChannel from './addNotificationChannel.mjs';
+import listNotificationChannels from './listNotificationChannels.mjs';
+import removeNotificationChannel from './removeNotificationChannel.mjs';
 
 const commandDefinitions: CommandDefinition[] = [
   listAlerts,
@@ -16,6 +19,9 @@ const commandDefinitions: CommandDefinition[] = [
   listFilteredKeywords,
   addFilteredKeyword,
   deleteFilteredKeyword,
+  addNotificationChannel,
+  listNotificationChannels,
+  removeNotificationChannel,
 ];
 
 const loadCommands = () => {

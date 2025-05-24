@@ -14,6 +14,9 @@ export const processListing = async (item: ScrapedItem) => {
     link: item.link,
     location,
     description: item.description,
+    imageUrl: item.imageUrl,
+    notified: false,
+    triggeredKeyword: item.triggeredKeyword,
   };
   return listing;
 };

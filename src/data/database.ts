@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { Alert } from '@/data/models/alert.js';
 import { Listing } from '@/data/models/listing.js';
 import { ListingContext } from '@/data/models/listingContext.js';
+import { NotificationChannel } from '@/data/models/notificationChannel.js';
 
 const db = new Database('alertcord-db.sqlite');
 
@@ -28,9 +29,12 @@ export function initializeDatabase() {
       link TEXT NOT NULL,
       location TEXT,
       description TEXT,
+      imageUrl TEXT,
       fullDescription TEXT,
+      triggeredKeyword TEXT,
       processedOn TEXT,
-      processingResult INTEGER
+      processingResult INTEGER,
+      notified BOOLEAN DEFAULT 0
     )
   `,
   ).run();
@@ -65,6 +69,16 @@ export function initializeDatabase() {
     `
     CREATE UNIQUE INDEX IF NOT EXISTS idx_listing_context_listingId ON listing_context(listingId)
     `,
+  ).run();
+
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS notification_channels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      channelId TEXT NOT NULL,
+      type INTEGER NOT NULL
+    )
+  `,
   ).run();
 }
 
@@ -105,8 +119,8 @@ export function addAlert(alert: Omit<Alert, 'id'>): void {
   query.run(
     alert.name,
     alert.keywords,
-    alert.notify_price === undefined ? null : alert.notify_price,
-    alert.urgent_notify_price === undefined ? null : alert.urgent_notify_price,
+    alert.notifyPrice === undefined ? null : alert.notifyPrice,
+    alert.urgentNotifyPrice === undefined ? null : alert.urgentNotifyPrice,
   );
 }
 
@@ -154,13 +168,13 @@ export function updateAlert(
     setParts.push('keywords = ?');
     values.push(updates.keywords);
   }
-  if (updates.notify_price !== undefined) {
+  if (updates.notifyPrice !== undefined) {
     setParts.push('notify_price = ?');
-    values.push(updates.notify_price);
+    values.push(updates.notifyPrice);
   }
-  if (updates.urgent_notify_price !== undefined) {
+  if (updates.urgentNotifyPrice !== undefined) {
     setParts.push('urgent_notify_price = ?');
-    values.push(updates.urgent_notify_price);
+    values.push(updates.urgentNotifyPrice);
   }
 
   if (setParts.length === 0) {
@@ -177,33 +191,45 @@ export function updateAlert(
   return query.run(...values).changes > 0;
 }
 
-export function addListing(listing: Omit<Listing, 'id'>): void {
+export function getAlertsByKeyword(keyword: string): Alert[] {
   if (!db) {
     throw new Error('Database not initialized');
   }
 
-  const query = db.prepare(`
-    INSERT OR IGNORE INTO listings (externalId, title, price, link, location, description, fullDescription, processedOn, processingResult)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  query.run(
-    listing.externalId,
-    listing.title,
-    listing.price === undefined ? null : listing.price,
-    listing.link,
-    listing.location || null,
-    listing.description || null,
-    listing.fullDescription || null,
-    listing.processedOn?.toISOString() || null,
-    listing.processingResult || null,
+  const query = db.prepare<[string], Alert>(
+    'SELECT * FROM alerts WHERE keywords LIKE ?',
   );
+  return query.all(`%${keyword}%`);
 }
+
+// export function addListing(listing: Omit<Listing, 'id'>): void {
+//   if (!db) {
+//     throw new Error('Database not initialized');
+//   }
+//
+//   const query = db.prepare(`
+//     INSERT OR IGNORE INTO listings (externalId, title, price, link, location, description, fullDescription, imageUrl, processedOn, processingResult)
+//     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+//   `);
+//
+//   query.run(
+//     listing.externalId,
+//     listing.title,
+//     listing.price === undefined ? null : listing.price,
+//     listing.link,
+//     listing.location || null,
+//     listing.description || null,
+//     listing.fullDescription || null,
+//     listing.imageUrl || null,
+//     listing.processedOn?.toISOString() || null,
+//     listing.processingResult || null,
+//   );
+// }
 
 export function addListings(listings: Omit<Listing, 'id'>[]): void {
   const insert = db.prepare(`
-    INSERT OR IGNORE INTO listings (externalId, title, price, link, location, description, fullDescription, processedOn, processingResult)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO listings (externalId, title, price, link, location, description, fullDescription, triggeredKeyword, imageUrl, processedOn, processingResult, notified)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertMany = db.transaction((listings) => {
@@ -216,8 +242,11 @@ export function addListings(listings: Omit<Listing, 'id'>[]): void {
         listing.location || null,
         listing.description || null,
         listing.fullDescription || null,
+        listing.triggeredKeyword || null,
+        listing.imageUrl || null,
         listing.processedOn?.toISOString() || null,
         listing.processingResult || null,
+        listing.notified === true ? 1 : 0,
       );
     }
   });
@@ -321,6 +350,14 @@ export function updateListing(
     setParts.push('fullDescription = ?');
     values.push(updates.fullDescription);
   }
+  if (updates.triggeredKeyword !== undefined) {
+    setParts.push('triggeredKeyword = ?');
+    values.push(updates.triggeredKeyword);
+  }
+  if (updates.imageUrl !== undefined) {
+    setParts.push('imageUrl = ?');
+    values.push(updates.imageUrl);
+  }
   if (updates.processedOn !== undefined && updates.processingResult !== null) {
     setParts.push('processedOn = ?');
     values.push(updates.processedOn?.toISOString() || null);
@@ -332,12 +369,14 @@ export function updateListing(
     setParts.push('processingResult = ?');
     values.push(updates.processingResult || null);
   }
+  if (updates.notified !== undefined) {
+    setParts.push('notified = ?');
+    values.push(updates.notified ? 1 : 0);
+  }
 
   if (setParts.length === 0) {
     return false;
   }
-
-  console.log('setParts', setParts, values);
 
   values.push(id);
   const query = db.prepare(`
@@ -397,6 +436,25 @@ export function getUnprocessedListings(): Listing[] {
   const query = db.prepare(`
     SELECT * FROM listings
     WHERE processingResult IS NULL
+  `);
+  const results = query.all();
+
+  return results.map((row) => ({
+    // @ts-ignore
+    ...row,
+    // @ts-ignore
+    processedOn: row.processedOn ? new Date(row.processedOn) : null,
+  }));
+}
+
+export function getListingsToNotify(): Listing[] {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const query = db.prepare(`
+    SELECT * FROM listings
+    WHERE notified != 1
   `);
   const results = query.all();
 
@@ -491,4 +549,60 @@ export function addOrUpdateListingContext(context: ListingContext): boolean {
 
     return result.changes > 0;
   }
+}
+
+export function getNotificationChannels(): NotificationChannel[] {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const query = db.prepare<[], NotificationChannel>(
+    'SELECT * FROM notification_channels',
+  );
+  return query.all();
+}
+
+export function getNotificationChannelByChannelId(
+  channelId: string,
+): NotificationChannel | undefined {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+  const query = db.prepare<[string], NotificationChannel>(
+    'SELECT * FROM notification_channels WHERE channelId = ?',
+  );
+
+  return query.get(channelId);
+}
+
+export function addNotificationChannel(
+  channel: Omit<NotificationChannel, 'id'>,
+): void {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const existingNotificationChannel = getNotificationChannelByChannelId(
+    channel.channelId,
+  );
+  if (existingNotificationChannel) {
+    throw new Error('DUPLICATE_CHANNEL');
+  }
+
+  const query = db.prepare(`
+    INSERT INTO notification_channels (channelId, type)
+    VALUES (?, ?)
+  `);
+  query.run(channel.channelId, channel.type);
+}
+
+export function removeNotificationChannel(channelId: string): boolean {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  const query = db.prepare(
+    'DELETE FROM notification_channels WHERE channelId = ?',
+  );
+  return query.run(channelId).changes > 0;
 }

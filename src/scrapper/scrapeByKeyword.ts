@@ -25,39 +25,46 @@ export const scrapeByKeyword = async (
     await page.goto(urlBuilder.build(), { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#searchForm', { timeout: 5_000 });
 
-    const items: ScrapedItem[] = await page.evaluate(() => {
-      // @ts-ignore
-      const elements = document.querySelectorAll('.standard-list-item');
-      const scrapedItems: ScrapedItem[] = [];
+    const items: ScrapedItem[] = await page.evaluate(
+      (scrapeKeyword: string) => {
+        // @ts-ignore
+        const elements = document.querySelectorAll('.standard-list-item');
+        const scrapedItems: ScrapedItem[] = [];
 
-      elements.forEach((element) => {
-        const externalId = element.getAttribute('data-item-id') || '';
-        const title = (
-          element.querySelector('.title')?.textContent || ''
-        ).trim();
-        const description = (
-          element.querySelector('.first-dataline')?.textContent || ''
-        ).trim();
-        const locationField = (
-          element.querySelector('.second-dataline')?.textContent || ''
-        ).trim();
-        const link = element.getAttribute('href') || '';
-        const price = (
-          element.querySelector('.price')?.textContent || ''
-        ).trim();
+        elements.forEach((element) => {
+          const externalId = element.getAttribute('data-item-id') || '';
+          const title = (
+            element.querySelector('.title')?.textContent || ''
+          ).trim();
+          const description = (
+            element.querySelector('.first-dataline')?.textContent || ''
+          ).trim();
+          const locationField = (
+            element.querySelector('.second-dataline')?.textContent || ''
+          ).trim();
+          const link = element.getAttribute('href') || '';
+          const price = (
+            element.querySelector('.price')?.textContent || ''
+          ).trim();
+          const imgUrl =
+            element.querySelector('img')?.getAttribute('src') || '';
 
-        scrapedItems.push({
-          externalId,
-          title,
-          description,
-          locationField,
-          link,
-          price,
+          scrapedItems.push({
+            externalId,
+            title,
+            description,
+            locationField,
+            link,
+            price,
+            imageUrl: imgUrl.includes('no-photo') ? null : imgUrl,
+            triggeredKeyword: scrapeKeyword,
+          });
         });
-      });
 
-      return scrapedItems;
-    });
+        return scrapedItems;
+      },
+      keyword,
+    );
 
     return items;
   } catch (error: any) {

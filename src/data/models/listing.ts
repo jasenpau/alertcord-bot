@@ -13,6 +13,9 @@ export interface Listing {
   location?: string;
   description?: string;
   fullDescription?: string;
+  triggeredKeyword: string;
+  imageUrl?: string;
   processedOn?: Date;
   processingResult?: ProcessingResult;
+  notified: boolean;
 }

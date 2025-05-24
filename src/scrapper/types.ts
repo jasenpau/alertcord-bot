@@ -5,4 +5,6 @@ export interface ScrapedItem {
   link: string;
   description?: string;
   locationField?: string;
+  imageUrl?: string;
+  triggeredKeyword: string;
 }
